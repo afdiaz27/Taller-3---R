@@ -1,0 +1,376 @@
+---
+title: "Taller 3 - Andrés Díaz, Yilmer Palacios"
+author: "Andrés Díaz - Cod: 200610686, Yilmer Palacios - Cod: 202214473"
+date: "2024-05-05"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(encoding = "utf-8")
+
+
+```
+
+```{r Preparación de paquetes, message=FALSE, warning=FALSE, include=FALSE}
+
+rm(list = ls())
+##Instalación de paquetes
+
+install.packages("rvest")
+install.packages("purrr")
+install.packages("tidyverse")
+install.packages("tokenizers")
+install.packages("syuzhet")
+install.packages("wordcloud")
+install.packages("tm")
+install.packages("cowplot")
+
+#Cargue de paquetes
+
+library(tm)
+library(wordcloud)
+library(syuzhet)
+library(tidyverse)
+library(tokenizers)
+library(ggplot2)
+library(rvest)
+library(purrr)
+library(dplyr)
+library(cowplot)
+
+```
+
+# Primer Punto
+
+## Ustedes son contratados para definir la estrategia de “pricing” o fijación de precios de una empresa que vende libros. En particular, la empresa está interesada en establecer un modelo que, con base en ciertos contenidos, permita entender los factores que explican o motivan el precio al que estarían dispuestos a pagar los lectores por esa obra. Para solucionar este problema, la empresa donde trabajan les define una hoja de ruta que delimitaron en la propuesta de contratación y les pide que la sigan. Esta definía los siguientes elementos:
+
+### 1.1. Consolidar a través de herramientas de web-scrapping una base de datos que cuente con información de los precios de los libros, la calificación en estrellas, la disponibilidad, una breve descripción de la obra, la categoría del libro y cualquier otra variable que consideren relevante. Para esto, utilicen la siguiente página web: All products | Books to Scrape - Sandbox.
+
+```{r 1.1}
+
+#Crear url's de las 50 páginas del sitio web
+url <- c()
+for (i in 1:50){
+  url[i] <- paste0('https://books.toscrape.com/catalogue/page-',i,'.html')
+}
+#Leer enlaces de las páginas de libros
+
+#Cantidad de veces que se va a hacer
+ciclos_consulta <- 1
+#Inicializar enlaces
+links <- c()  
+
+for (i in 1:length(url)){
+  
+  links <- c(links,url[i] %>% read_html() %>%  
+    html_nodes(xpath = '//*[@id="default"]/div/div/div/div/section/div[2]') %>%
+    html_nodes("h3") %>% 
+    html_nodes("a") %>% 
+    html_attr("href"))
+}
+  
+#Creación de enlaces 
+
+
+enlaces_libros <- paste0("https://books.toscrape.com/catalogue/",links)
+
+#Inicialización de base de datos de libros
+
+#Datos que deben obtenerse dentro de cada libro:
+#Precio
+#Las estrellas
+#La disponibilidad
+#Número de revisiones
+#Descripción
+
+columnas_bd_libros <- c("Titulo_libro",
+                        "Categoria_libro",
+                        "Cantidad_estrellas",
+                        "UPC",
+                        "Tipo_producto",
+                        "Precio_sin_impuesto",
+                        "Precio_con_impuesto",
+                        "Impuesto",
+                        "Disponibilidad",
+                        "Numero_Revisiones",
+                        "Descripcion_libro")
+
+#Creación de una base de datos vacía
+bd_libros <- data.frame(matrix(ncol = length(columnas_bd_libros),nrow=0))
+
+#Se crea una función llamada ciclo_corto para solucionar la restricción de la
+#cantidad de consultas que puede recibir la página
+
+ciclo_corto <- function(bd_libros,n_inicial,n_final){
+  
+  ##Inputs
+  #bd_libros (dataframe): base de datos con la información de libros
+  #n_inicial (int): número de libro en el que empieza el ciclo
+  #n_final (int): número de libro en el que finaliza el ciclo
+  
+  ##Output
+  #bd_libros (dataframe): base de datos con la información de libros, incluidos
+  #en este ciclo
+  
+  for (i in n_inicial:n_final){
+  
+    link_libro <- enlaces_libros[i]
+    
+    #Acceder a título del libro
+    
+    titulo_libro <- link_libro %>% read_html() %>%
+      html_nodes("h1") %>%
+      html_text()
+    
+    titulo_libro <- c("Título del libro",titulo_libro)  
+      
+    #Acceder a categoría del libro
+    
+    categoria_libro <- link_libro %>% read_html() %>%
+      html_nodes(xpath = '//*[@id="default"]/div/div/ul/li[3]/a') %>%
+      html_text()
+    
+    #Acceder a tabla con datos del libro
+    datos_libro <- link_libro %>% read_html() %>%
+      html_table(fill=TRUE)
+    
+    datos_libro <- as.data.frame(datos_libro)
+    
+    #Acceder a descripción del libro
+    
+    descripcion_libro <- link_libro %>% read_html() %>%
+      html_nodes(xpath = '//*[@id="content_inner"]/article/p') %>%
+      html_text()
+    
+    descripcion_libro <- c("Descripción del libro",descripcion_libro)
+    
+    #Sacar estrellas
+    
+    estrellas_libro <- link_libro %>% read_html() %>%
+      html_nodes(xpath = '//*[@id="content_inner"]/article/div[1]/div[2]/p[3]')
+    
+    estrellas_libro <- html_attr(estrellas_libro,"class")
+    
+    #Combinar título, datos y descripción
+    
+    info_libro <- rbind(titulo_libro,
+                        categoria_libro,
+                        estrellas_libro,
+                        datos_libro,
+                        descripcion_libro)
+    
+    #Crear base de datos para todos los libros
+    
+    bd_libros <- rbind(bd_libros,info_libro[,2])
+  
+  }
+  return(bd_libros)
+  
+}
+
+#Cantidad de ciclos según la cantidad de libros
+
+cantidad_ciclos <- 20 #Cantidad de ciclos de consulta
+tamaño_segmento <- length(enlaces_libros)/cantidad_ciclos #Tamaño según # libros
+
+#Ciclo general compuesto de ciclos cortos
+for (j in seq(0,cantidad_ciclos-1)){
+  
+  bd_libros <- ciclo_corto(bd_libros,
+                           tamaño_segmento*j+1,
+                           tamaño_segmento*j+tamaño_segmento)
+  print(paste0("Libro número ",tamaño_segmento*j+tamaño_segmento))
+  Sys.sleep(15) #Se suspende por 15 segundos para evitar el colapso de la página
+}
+
+#Asignación de nombres a las columnas
+
+colnames(bd_libros) <- columnas_bd_libros
+  
+###Procesamiento de variables numéricas
+
+#Asignación de valor a las estrellas
+
+bd_libros <- bd_libros %>%
+  mutate(Cantidad_estrellas = case_when(
+    Cantidad_estrellas == 'star-rating One'~ 1,
+    Cantidad_estrellas == 'star-rating Two'~ 2,
+    Cantidad_estrellas == 'star-rating Three'~ 3,
+    Cantidad_estrellas == 'star-rating Four'~ 4,
+    Cantidad_estrellas == 'star-rating Five'~ 5))
+
+#Eliminación de caracter de moneda
+  
+bd_libros$Precio_sin_impuesto <- 
+    as.numeric(gsub("[$€£¥₹₽₿₱₩₫₪₵]", "", bd_libros$Precio_sin_impuesto))
+  
+bd_libros$Precio_con_impuesto <- 
+    as.numeric(gsub("[$€£¥₹₽₿₱₩₫₪₵]", "", bd_libros$Precio_con_impuesto))
+
+bd_libros$Impuesto <- 
+    as.numeric(gsub("[$€£¥₹₽₿₱₩₫₪₵]", "", bd_libros$Impuesto))
+  
+#Extracción de cantidad en la disponibilidad
+  
+bd_libros$Disponibilidad <- str_extract(bd_libros$Disponibilidad, 
+                                          "\\d+")
+
+bd_libros$Disponibilidad <- as.numeric(bd_libros$Disponibilidad)
+
+#Conversión a número de número de revisiones
+  
+bd_libros$Numero_Revisiones <- as.numeric(bd_libros$Numero_Revisiones)
+
+#Conversión de "Categoría_Libro" a variable categórica
+
+bd_libros$Categoria_libro <- factor(bd_libros$Categoria_libro)
+
+#Resumen del libro
+
+head(bd_libros)
+
+```
+
+### 1.2. Realizar un análisis exploratorio de la base de datos, presentando y explicando las estadísticas descriptivas que consideren relevantes para explicar los datos.
+
+```{r 1.2.a}
+
+#Resumen de variables numéricas
+
+summary(bd_libros %>% select_if(is.numeric))
+
+```
+```{r 1.2.b.}
+
+#Revisión de variable categórica
+sort(summary(bd_libros$Categoria_libro),decreasing = TRUE)
+
+```
+### 1.3.Realicen un procesamiento de las descripciones de los textos, para esto conviertan las palabras a minúsculas, eliminen los acentos, eliminen los símbolos y los números. Así mismo, eliminen las stopwords más frecuentes.
+
+```{r 1.3.}
+
+##Eliminación de acentos, puntuación y símbolos
+
+vector_text <- bd_libros$Descripcion_libro
+
+vector_text <- gsub("[^[:alnum:][:space:]]", "", vector_text)
+
+##Creación de corpus
+
+corpus <- Corpus(VectorSource(vector_text))
+
+#Convertir a minúsculas
+
+corpus <- tm_map(corpus, content_transformer(tolower))
+
+#Eliminar números
+
+corpus <- tm_map(corpus, removeNumbers)
+
+#Eliminar stopwords
+
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+
+#Eliminar espacios adicionales
+
+corpus <- tm_map(corpus, stripWhitespace)
+
+#Ejemplo de texto con el procesamiento del teto
+corpus[[1]][1]
+
+```
+### 1.4. Creen una matriz del tipo Term Document Matrix que cuente la frecuencia de aparición de cada palabra por documento.
+
+```{r 1.4}
+
+#Crear matriz de palabras
+
+matriz_palabras <- TermDocumentMatrix(corpus)
+matriz_palabras <- as.matrix(matriz_palabras)
+
+#Extracto de la matriz de palabras
+head(matriz_palabras[,1:20],10)
+
+```
+### 1.5. Presenten una nube de palabras que les permita identificar las palabras más frecuentes en los libros de la base de datos. Utilizando la librería Cowplot presente una gráfica que contenga una nube de palabras pero ahora separado por 4 categorías de los libros.
+
+```{r 1.5.a}
+
+#Nube de palabras
+
+#Suma de veces de la aparición de las palabras en los libros
+
+count_palabra <- rowSums(matriz_palabras)
+
+#Nube de palabras
+
+wordcloud(words = names(count_palabra), freq = count_palabra, max.words = 30, 
+          random.order=FALSE, colors = brewer.pal(8, "Accent"))
+
+```
+```{r 1.5.b}
+
+#Selección de categorías
+
+categorias_graficas <- c("Nonfiction","Sequential Art",
+                         "Fiction","Young Adult")
+
+#Creación de una lista de listas con los índices de los libros según categoría
+id_libros_categoria <- c()
+
+for (i in 1:length(categorias_graficas)){
+
+    id_libros_categoria[[i]] <- which(bd_libros$Categoria_libro == categorias_graficas[i])
+}
+
+#Dividir la matriz_palabras según categoría a partir de los indices
+
+matriz_non_fiction <- matriz_palabras[, id_libros_categoria[[1]]]
+matriz_seq_art <- matriz_palabras[, id_libros_categoria[[2]]]
+matriz_fiction <- matriz_palabras[, id_libros_categoria[[3]]]
+matriz_young_adult <- matriz_palabras[, id_libros_categoria[[4]]]
+
+
+#Suma de veces de la aparición de las palabras en los libros
+
+count_non_fiction <- rowSums(matriz_non_fiction)
+count_seq_art <- rowSums(matriz_seq_art)
+count_fiction <- rowSums(matriz_fiction)
+count_young_adult <- rowSums(matriz_young_adult)
+
+ancho <- 1.5
+
+#Nube de palabras
+
+cloud_non_fiction <- wordcloud(words = names(count_non_fiction), 
+                               freq = count_non_fiction, max.words = 30,
+                               random.order=FALSE, scale =c(ancho,ancho),
+                               colors = brewer.pal(8, "Accent"))
+
+cloud_seq_art <- wordcloud(words = names(count_seq_art), 
+                               freq = count_seq_art, max.words = 30,
+                               random.order=FALSE, scale =c(ancho,ancho),
+                               colors = brewer.pal(8, "Accent"))
+
+cloud_fiction <- wordcloud(words = names(count_fiction), 
+                               freq = count_fiction, max.words = 30,
+                               random.order=FALSE, scale =c(ancho,ancho),
+                               colors = brewer.pal(8, "Accent"))
+
+cloud_young_adult <- wordcloud(words = names(count_young_adult), 
+                               freq = count_young_adult, max.words = 30,
+                               random.order=FALSE, scale =c(ancho,ancho),
+                               colors = brewer.pal(8, "Accent"))
+
+plot_grid(cloud_non_fiction,cloud_seq_art,
+          cloud_fiction,cloud_young_adult,
+          labels = categorias_graficas,
+          rel_widths = c(0.1, 0.1),
+          ncol=2)
+
+```
