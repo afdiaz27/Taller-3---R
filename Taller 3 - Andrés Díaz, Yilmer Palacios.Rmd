@@ -343,7 +343,7 @@ count_seq_art <- rowSums(matriz_seq_art)
 count_fiction <- rowSums(matriz_fiction)
 count_young_adult <- rowSums(matriz_young_adult)
 
-ancho <- 1.5
+ancho <- 1
 
 #Nube de palabras
 
@@ -366,6 +366,10 @@ cloud_young_adult <- wordcloud(words = names(count_young_adult),
                                freq = count_young_adult, max.words = 30,
                                random.order=FALSE, scale =c(ancho,ancho),
                                colors = brewer.pal(8, "Accent"))
+
+
+
+"https://r-charts.com/ranking/ggwordcloud/"
 
 plot_grid(cloud_non_fiction,cloud_seq_art,
           cloud_fiction,cloud_young_adult,
