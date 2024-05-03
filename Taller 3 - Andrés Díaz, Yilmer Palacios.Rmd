@@ -345,61 +345,32 @@ count_seq_art <- rowSums(matriz_seq_art)
 count_fiction <- rowSums(matriz_fiction)
 count_young_adult <- rowSums(matriz_young_adult)
 
-#Convertir en dataframes para utilizar ggwordcloud
-
-#Non-fiction
-
-df_count_non_fiction <- data.frame(names(count_non_fiction),count_non_fiction,
-                                   row.names = NULL)
-colnames(df_count_non_fiction) <- c("Words","Frequency")
-
-#Sequential art
-
-df_count_seq_art <- data.frame(names(count_seq_art),count_seq_art,
-                                   row.names = NULL)
-colnames(df_count_seq_art) <- c("Words","Frequency")
-
-#Fiction
-
-df_count_fiction <- data.frame(names(count_fiction),count_fiction,
-                                   row.names = NULL)
-colnames(df_count_fiction) <- c("Words","Frequency")
-
-#Young adult
-
-df_count_young_adult <- data.frame(names(count_young_adult),count_young_adult,
-                                   row.names = NULL)
-colnames(df_count_young_adult) <- c("Words","Frequency")
-
-
-#Nube de palabras
-
-
-ggplot(df_count_non_fiction, aes(label = Words, size = Frequency)) +
-  geom_text_wordcloud(max.words = 30) +
-  scale_size_area(max_size = 20) +
-  theme_minimal()
-
-
-
+#NubeS de palabras
 
 cloud_non_fiction <- ggwordcloud(words = names(count_seq_art), 
                                freq = count_seq_art, max.words = 30,
-                               random.order=FALSE)+
-                  scale_size_area(max_size = 20)
+                               random.order=FALSE,
+                               colors = brewer.pal(8, "Accent"))+
+                               scale_size_area(max_size = 8)
 
 
 cloud_seq_art <- ggwordcloud(words = names(count_seq_art), 
                                freq = count_seq_art, max.words = 30,
-                               random.order=FALSE)
+                               random.order=FALSE,
+                               colors = brewer.pal(8, "Accent"))+
+                               scale_size_area(max_size = 8)
 
 cloud_fiction <- ggwordcloud(words = names(count_fiction), 
                                freq = count_fiction, max.words = 30,
-                               random.order=FALSE)
+                               random.order=FALSE,
+                               colors = brewer.pal(8, "Accent"))+
+                               scale_size_area(max_size = 8)
 
 cloud_young_adult <- ggwordcloud(words = names(count_young_adult), 
                                freq = count_young_adult, max.words = 30,
-                               random.order=FALSE)
+                               random.order=FALSE,
+                               colors = brewer.pal(8, "Accent"))+
+                               scale_size_area(max_size = 8)
 
 
 
@@ -408,7 +379,6 @@ cloud_young_adult <- ggwordcloud(words = names(count_young_adult),
 plot_grid(cloud_non_fiction,cloud_seq_art,
           cloud_fiction,cloud_young_adult,
           labels = categorias_graficas,
-          rel_widths = c(0.1, 0.1),
           ncol=2)
 
 ```
