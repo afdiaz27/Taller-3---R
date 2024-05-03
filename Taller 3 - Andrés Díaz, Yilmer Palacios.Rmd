@@ -29,6 +29,12 @@ install.packages("wordcloud")
 install.packages("tm")
 install.packages("cowplot")
 install.packages("ggwordcloud")
+install.packages("modelsummary")
+install.packages("estimatr")
+install.packages("sandwich")
+
+
+
 
 #Cargue de paquetes
 
@@ -43,6 +49,9 @@ library(purrr)
 library(dplyr)
 library(cowplot)
 library(ggwordcloud)
+library(modelsummary)
+library(estimatr)
+library(sandwich)
 
 ```
 
@@ -373,12 +382,43 @@ cloud_young_adult <- ggwordcloud(words = names(count_young_adult),
                                scale_size_area(max_size = 8)
 
 
-
-"https://r-charts.com/ranking/ggwordcloud/"
+#Creación de gráfica múltiple
 
 plot_grid(cloud_non_fiction,cloud_seq_art,
           cloud_fiction,cloud_young_adult,
           labels = categorias_graficas,
           ncol=2)
+
+```
+### 1.6. Realizar un análisis estadístico a través de un modelo de regresión lineal que le permita entender la relación entre ciertas covariables asociadas a los libros (elegidas y justificadas por ustedes) y el precio de los libros. Además, deben presentarlo de forma atractiva usando gráficas apropiadas
+
+```{r 1.6.a.}
+
+#Modelo
+
+modelo <- lm(Precio_sin_impuesto ~ 
+             Categoria_libro+Cantidad_estrellas+Disponibilidad,
+             data = bd_libros)
+
+#Tabla
+
+tabla_modelo <- modelsummary(modelo,statistic = "p_value = {p.value}",
+             coef_omit="Intercept",
+              output = "markdown")
+
+tabla_modelo
+```
+```{r 1.6.b.}
+
+#Modelo
+
+modelplot(modelo,coef_omit="Intercept",coef_rename = TRUE) +
+  aes(color = ifelse(p.value < 0.05, 
+                     "Significativo",
+                     "No significativo")) +
+  scale_color_manual(values = c("grey", "green"))+
+  theme(axis.text=element_text(size=5,face="bold"))
+
+
 
 ```
