@@ -309,7 +309,7 @@ corpus <- tm_map(corpus, removeWords, stopwords("english"))
 corpus <- tm_map(corpus, stripWhitespace)
 
 #Ejemplo de texto con el procesamiento del teto
-corpus[[1]][1]
+print(paste0("Este es un ejemplo del texto obtenido: ",corpus[[1]][4]))
 
 ```
 ### 1.4. Creen una matriz del tipo Term Document Matrix que cuente la frecuencia de aparición de cada palabra por documento.
@@ -322,6 +322,8 @@ matriz_palabras <- TermDocumentMatrix(corpus)
 matriz_palabras <- as.matrix(matriz_palabras)
 
 #Extracto de la matriz de palabras
+print("Extracto de la matriz de palabras:")
+
 head(matriz_palabras[,1:20],10)
 
 ```
@@ -329,13 +331,11 @@ head(matriz_palabras[,1:20],10)
 
 ```{r 1.5.a}
 
-#Nube de palabras
-
 #Suma de veces de la aparición de las palabras en los libros
 
 count_palabra <- rowSums(matriz_palabras)
 
-#Nube de palabras
+#Nube de palabras para todos los libros
 
 wordcloud(words = names(count_palabra), freq = count_palabra, max.words = 30, 
           random.order=FALSE, colors = brewer.pal(8, "Accent"))
@@ -407,7 +407,9 @@ plot_grid(cloud_non_fiction,cloud_seq_art,
           ncol=2)
 
 ```
-### 1.6. Realizar un análisis estadístico a través de un modelo de regresión lineal que le permita entender la relación entre ciertas covariables asociadas a los libros (elegidas y justificadas por ustedes) y el precio de los libros. Además, deben presentarlo de forma atractiva usando gráficas apropiadas
+### 1.6. Realizar un análisis estadístico a través de un modelo de regresión lineal que le permita entender la relación entre ciertas covariables asociadas a los libros (elegidas y justificadas por ustedes) y el precio de los libros. Además, deben presentarlo de forma atractiva usando gráficas apropiadas.
+
+#### Para realizar el análisis estadístico se escogieron tres variables independientes: "Categoria_libro", "Cantidad_estrellas" y "Disponibilidad". La categoría del libro se creería que tiene alguna correlación con el precio de los libros, teniendo en cuenta que hay géneros que son más demandados por los lectores; en cuanto a la cantidad de estrellas, asumiendo que el público toma sus decisiones de compra a partir de la calificación que está en la página, puede ser un buen predictor del precio de los libros; por último, la disponibilidad del libro es un factor que puede predecir el precio teniendo en cuenta la oferta que puede haber del respectivo producto.
 
 ```{r 1.6.a.}
 
@@ -439,3 +441,4 @@ modelplot(modelo,coef_omit="Intercept",coef_rename = TRUE) +
 
 
 ```
+#### De acuerdo con el análisis realizado, el modelo en su conjunto no explica con mayor significancia estadística el precio del libro (un estadístico F de 0.95). En cuanto a significancia particular, los coeficientes de las variables de la cantidad de estrellas y de la disponibilidad no fueron estadísticamente significativos a ningún nivel estándar; respecto a las categorías, se identificaron cinco (5) categorías que tienen una correlación positiva estadísticamente significativa al 5% con el precio: "Suspense", "Politics", "Novels", New Adult" y "Health".
