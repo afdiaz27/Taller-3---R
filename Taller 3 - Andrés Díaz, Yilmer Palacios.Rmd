@@ -252,15 +252,32 @@ head(bd_libros)
 
 #Resumen de variables numéricas
 
-summary(bd_libros %>% select_if(is.numeric))
+summary(bd_libros)
+
+#summary(bd_libros %>% select_if(is.numeric))
+
+
 
 ```
+#### La base de datos está compuesta de la información de mil (1000) libros parametrizados en once variables: seis de ellas son numéricas, tres de carácteres y una categórica. 
+
+#### De las seis variables numéricas, dos ("Impuesto" y "Número_Revisiones") tienen valor cero en todas las observaciones; la primera, al ser cero, hace que la variable de precio con impuesto sea igual al del precio sin impuesto. La variable "Cantidad_estrellas" presenta la valoración en estrellas que le han dado libro, con un promedio de 2.923, siendo ligeramente inferior a la mediana con valor de 3. Por otro lado, la variable "Precio_sin_impuesto" tiene un promedio muy similar a la mediana y los tamaños de los rangos intercuartiles está distribuidos homogeneamente. En cuanto a la "Disponibilidad", la distribución es mucho más inclinada hacia los valores inferiores, como se puede ver por los tamaños de los rangos intercuartiles, así como por el hecho de que la mediana sea considerablemente menor que el promedio.
+
+#### Respecto a las variables de carácteres, se tiene el título del libro, un código alfanumérico que puede ser de identificación y la descripción del libro.
+
+#### En cuanto a la variable categórica, se tiene la siguiente información por categoría:
+
+
 ```{r 1.2.b.}
 
 #Revisión de variable categórica
 sort(summary(bd_libros$Categoria_libro),decreasing = TRUE)
 
+
+
 ```
+#### La categoría con mayor cantidad de libros es "Default", lo que parecía inicialmente un error de la obtención de datos, sin embargo, al explorar la página, se puede ver que es una categoría en la plataforma. Esta situación también pasa con la categoría "Add a comment". Incluyendo estas categorías, los libros están clasificados en cincuenta (50) categorías distintas.
+
 ### 1.3.Realicen un procesamiento de las descripciones de los textos, para esto conviertan las palabras a minúsculas, eliminen los acentos, eliminen los símbolos y los números. Así mismo, eliminen las stopwords más frecuentes.
 
 ```{r 1.3.}
